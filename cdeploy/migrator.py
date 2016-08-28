@@ -35,7 +35,7 @@ class Migrator(object):
 
         if duplicates:
             raise exc.DuplicateSchemaVersionError(
-                    "Duplicate schema version(s) : {0}".format(duplicates))
+                "Duplicate schema version(s) : {0}".format(duplicates))
 
         def new_migration_filter(f):
             return (
@@ -67,12 +67,11 @@ class Migrator(object):
                 os.path.isfile(os.path.join(self.migrations_path, f)) and
                 self.migration_version(f) == top_version
             )
-
         top_migration = list(self.filter_migrations(top_version_filter))[0]
 
         cqlexecutor.CQLExecutor.execute_undo(
-                self.session,
-                self.read_migration(top_migration)
+            self.session,
+            self.read_migration(top_migration)
         )
         cqlexecutor.CQLExecutor.rollback_schema_migration(self.session)
         print('  -> Migration {0} undone ({1})\n'.format(top_version,
@@ -90,8 +89,8 @@ class Migrator(object):
             dir_list.remove('config')
         migration_dir_listing = sorted(dir_list, key=self.migration_version)
         return filter(
-                filter_func,
-                migration_dir_listing)
+            filter_func,
+            migration_dir_listing)
 
     def migration_version(self, file_name):
         return int(file_name.split('.')[0].split('_')[0])
@@ -148,8 +147,8 @@ def get_cluster(config):
     auth_provider = None
     if 'auth_enabled' in config and config['auth_enabled']:
         auth_provider = auth.PlainTextAuthProvider(
-                username=config['auth_username'],
-                password=config['auth_password'],
+            username=config['auth_username'],
+            password=config['auth_password'],
         )
 
     ssl_options = None
@@ -159,9 +158,9 @@ def get_cluster(config):
             'ssl_version': ssl.PROTOCOL_TLSv1,  # pylint: disable=E1101
         }
     cluster = Cluster(
-            config['hosts'],
-            auth_provider=auth_provider,
-            ssl_options=ssl_options,
+        config['hosts'],
+        auth_provider=auth_provider,
+        ssl_options=ssl_options,
     )
     return cluster
 
@@ -173,7 +172,7 @@ def configure_session(session, config):
     # way new options can be supported just by adding an entry to each dict.
 
     optmap = {'consistency_level': 'default_consistency_level',
-              'timeout': 'default_timeout'}
+              'timeout':           'default_timeout'}
 
     conlevel = cassandra.ConsistencyLevel.name_to_value  # Convenience alias.
     converters = {'default_consistency_level': (lambda s: conlevel[s])}
@@ -201,10 +200,10 @@ def configure_session(session, config):
 
 def create_keyspace(config, session):
     session.execute(
-            "CREATE KEYSPACE {0} WITH REPLICATION = {1};".format(
-                    config['keyspace'],
-                    config['replication_strategy']
-            )
+        "CREATE KEYSPACE {0} WITH REPLICATION = {1};".format(
+                config['keyspace'],
+                config['replication_strategy']
+        )
     )
     session.set_keyspace(config['keyspace'])
 
