@@ -131,17 +131,19 @@ def main():
         sys.exit(1)
 
     config = load_config(migrations_path, os.getenv('ENV'))
-
-    session = get_session(config)
+    cluster = get_cluster(config)
+    session = cluster.connect()
+    session = configure_session(session, config)
     migrator = Migrator(migrations_path, session)
 
     if undo:
         migrator.undo()
     else:
         migrator.run_migrations()
+    cluster.shutdown()
 
 
-def get_session(config):
+def get_cluster(config):
     auth_provider = None
     if 'auth_enabled' in config and config['auth_enabled']:
         auth_provider = auth.PlainTextAuthProvider(
@@ -155,15 +157,15 @@ def get_session(config):
             'ca_certs': config['ssl_ca_certs'],
             'ssl_version': ssl.PROTOCOL_TLSv1,  # pylint: disable=E1101
         }
-
     cluster = Cluster(
         config['hosts'],
         auth_provider=auth_provider,
         ssl_options=ssl_options,
     )
+    return cluster
 
-    session = cluster.connect()
 
+def configure_session(session, config):
     # Set session options.  One dict mapping cdeploy option names to
     # corresponding cassandra session option names; another dict defining any
     # conversions that need to be done on the value in the config file. This
@@ -199,8 +201,8 @@ def get_session(config):
 def create_keyspace(config, session):
     session.execute(
         "CREATE KEYSPACE {0} WITH REPLICATION = {1};".format(
-            config['keyspace'],
-            config['replication_strategy']
+                config['keyspace'],
+                config['replication_strategy']
         )
     )
     session.set_keyspace(config['keyspace'])

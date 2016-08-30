@@ -155,7 +155,7 @@ class SessionTests(unittest.TestCase):
         self.mock_cluster.return_value = self.returned_cluster
 
     def test_auth_disabled(self):
-        migrator.get_session(self.config)
+        migrator.get_cluster(self.config)
 
         args, kwargs = self.mock_cluster.call_args
         self.assertEqual(None, kwargs['auth_provider'])
@@ -170,7 +170,7 @@ class SessionTests(unittest.TestCase):
             provider = mock.Mock()
             mock_provider.return_value = provider
 
-            migrator.get_session(self.config)
+            migrator.get_cluster(self.config)
 
             args, kwargs = mock_provider.call_args
             self.assertEqual(self.config['auth_username'], kwargs['username'])
@@ -180,7 +180,7 @@ class SessionTests(unittest.TestCase):
             self.assertEqual(provider, kwargs['auth_provider'])
 
     def test_ssl_disabled(self):
-        migrator.get_session(self.config)
+        migrator.get_cluster(self.config)
 
         args, kwargs = self.mock_cluster.call_args
         self.assertEqual(None, kwargs['ssl_options'])
@@ -189,7 +189,7 @@ class SessionTests(unittest.TestCase):
         self.config['ssl_enabled'] = True
         self.config['ssl_ca_certs'] = '/path/to/ca/certs'
 
-        migrator.get_session(self.config)
+        migrator.get_cluster(self.config)
 
         args, kwargs = self.mock_cluster.call_args
         self.assertEqual(
@@ -207,14 +207,14 @@ class SessionTests(unittest.TestCase):
         mock_cluster.connect.return_value = mock_session
         self.mock_cluster.return_value = mock_cluster
 
-        session = migrator.get_session(self.config)
+        session = migrator.configure_session(mock_session, self.config)
 
         self.assertEqual(level, session.default_consistency_level)
 
     def test_consistency_level_ALL(self):
         self.config['consistency_level'] = 'ALL'
 
-        session = migrator.get_session(self.config)
+        session = migrator.configure_session(self.session, self.config)
 
         self.assertEqual(
             cassandra.ConsistencyLevel.ALL,
@@ -224,7 +224,7 @@ class SessionTests(unittest.TestCase):
     def test_consistency_level_EACH_QUORUM(self):
         self.config['consistency_level'] = 'EACH_QUORUM'
 
-        session = migrator.get_session(self.config)
+        session = migrator.configure_session(self.session, self.config)
 
         self.assertEqual(
             cassandra.ConsistencyLevel.EACH_QUORUM,
@@ -240,7 +240,7 @@ class SessionTests(unittest.TestCase):
             None
         ]
 
-        migrator.get_session(self.config)
+        migrator.configure_session(self.session, self.config)
         ((args,), _) = self.session.set_keyspace.call_args
         self.assertEqual(self.config["keyspace"], args)
 
@@ -259,7 +259,7 @@ class SessionTests(unittest.TestCase):
         self.session.set_keyspace.side_effect = cassandra.InvalidRequest
 
         with self.assertRaises(cassandra.InvalidRequest):
-            migrator.get_session(self.config)
+            migrator.configure_session(self.session, self.config)
 
         ((args,), _) = self.session.set_keyspace.call_args
         self.assertEqual(self.config["keyspace"], args)
