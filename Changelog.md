@@ -1,5 +1,9 @@
 Changelog
 =========
+1.7
+---
+- Properly closes connection to cluster
+
 1.6
 ---
 - Adds configurable default_timeout setting to Cassandra driver session
