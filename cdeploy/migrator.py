@@ -157,9 +157,14 @@ def get_cluster(config):
             'ca_certs': config['ssl_ca_certs'],
             'ssl_version': ssl.PROTOCOL_TLSv1,  # pylint: disable=E1101
         }
+    port = '9042'
+    if 'port' in config:
+        port = config['port']
+
     cluster = Cluster(
         config['hosts'],
         auth_provider=auth_provider,
+        port=port,
         ssl_options=ssl_options,
     )
     return cluster

@@ -29,10 +29,11 @@ def reset_db(keyspace):
 
 def run_migrator(arg=''):
     test_dir = os.path.dirname(os.path.realpath(__file__))
-    os.system(
+    result = os.system(
         'cd {0}/..; python migrator.py test/migrations {1}'.format(test_dir,
                                                                    arg)
     )
+    return result
 
 
 def do_undo():
@@ -89,6 +90,19 @@ class DatabaseEnvironmentsTest(unittest.TestCase):
             'SELECT * FROM migrations_test.schema_migrations LIMIT 1'
         )
         self.assertEquals(result[0].version, 2)
+
+
+class PortConfigTest(unittest.TestCase):
+    def setUp(self):
+        reset_db('port_test')
+
+    def tearDown(self):
+        os.unsetenv('ENV')
+
+    def test_port_configured(self):
+        os.putenv('ENV', 'port')
+        result = run_migrator()
+        self.assertEquals(result,0)
 
 
 if __name__ == '__main__':

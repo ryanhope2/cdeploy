@@ -11,3 +11,8 @@ keyspace:
     keyspace: migrations_keyspace_test
     create_keyspace: true
     replication_strategy: "{'class': 'SimpleStrategy', 'replication_factor': '1'}"
+
+port:
+    hosts: [cassandra.local]
+    port: 9042
+    keyspace: port_test

@@ -80,6 +80,7 @@ Additional configuration parameters for Cassandra are available:
         auth_enabled: true
         auth_username: username
         auth_password: password
+        port: 9042
         ssl_enabled: true
         ssl_ca_certs: /path/to/ca/certs
         consistency_level: ALL
