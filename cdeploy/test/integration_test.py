@@ -102,7 +102,7 @@ class PortConfigTest(unittest.TestCase):
     def test_port_configured(self):
         os.putenv('ENV', 'port')
         result = run_migrator()
-        self.assertEquals(result,0)
+        self.assertEquals(result, 0)
 
 
 if __name__ == '__main__':
