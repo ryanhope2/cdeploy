@@ -103,7 +103,7 @@ class UndoMigrationTests(unittest.TestCase):
         cqlexecutor.CQLExecutor.rollback_schema_migration = mock.Mock()
         self.migrator.undo()
         cqlexecutor.CQLExecutor.rollback_schema_migration. \
-            assert_called_once_with(self.session,False)
+            assert_called_once_with(self.session, False)
 
     def test_it_should_rollback_version_2(self):
         cqlexecutor.CQLExecutor.execute_undo = mock.Mock()
