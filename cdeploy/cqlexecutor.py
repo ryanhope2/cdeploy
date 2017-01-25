@@ -6,7 +6,10 @@ class CQLExecutor:
         pass
 
     @staticmethod
-    def init_table(session):
+    def init_table(session, dry_run=False):
+        if dry_run:
+            return
+
         session.execute("""
             CREATE TABLE IF NOT EXISTS schema_migrations
                     (type text, version int, PRIMARY KEY(type, version))
@@ -19,30 +22,37 @@ class CQLExecutor:
         return list(session.execute('SELECT * FROM schema_migrations LIMIT 1'))
 
     @staticmethod
-    def execute(session, script):
+    def execute(session, script, dry_run=False):
         statements = parse_cql(migration_section_of, script)
 
         for cql_statement in statements:
             print('  * Executing: {0}'.format(cql_statement))
-            session.execute(cql_statement)
+            if not dry_run:
+                session.execute(cql_statement)
 
     @staticmethod
-    def execute_undo(session, script):
+    def execute_undo(session, script, dry_run=False):
         statements = parse_cql(undo_section_of, script)
 
         for cql_statement in statements:
             print('  * Executing: {0}'.format(cql_statement))
-            session.execute(cql_statement)
+            if not dry_run:
+                session.execute(cql_statement)
 
     @staticmethod
-    def add_schema_migration(session, version):
+    def add_schema_migration(session, version, dry_run=False):
+        if dry_run:
+            return
+
         session.execute("""
             INSERT INTO schema_migrations (type, version)
                 VALUES ('migration', {0})""".format(version))
 
     @staticmethod
-    def rollback_schema_migration(session):
+    def rollback_schema_migration(session, dry_run=False):
         top_version = CQLExecutor.get_top_version(session)[0].version
+        if dry_run:
+            return
         session.execute("""
             DELETE FROM schema_migrations
                 WHERE type = 'migration'

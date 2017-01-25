@@ -34,15 +34,16 @@ class ApplyingMigrationTests(unittest.TestCase):
         cqlexecutor.CQLExecutor.init_table = mock.Mock()
         self.migrator.run_migrations()
         cqlexecutor.CQLExecutor.init_table.assert_called_once_with(
-            self.session
+            self.session,
+            False
         )
 
     def test_it_should_initially_apply_all_the_migrations(self):
         cqlexecutor.CQLExecutor.execute = mock.Mock()
         self.migrator.run_migrations()
         cqlexecutor.CQLExecutor.execute.assert_has_calls([
-            mock.call(self.session, migration_1_content),
-            mock.call(self.session, migration_2_content)
+            mock.call(self.session, migration_1_content, False),
+            mock.call(self.session, migration_2_content, False)
         ])
 
     def test_it_should_add_migration_versions_to_schema_migrations_table(self):
@@ -50,8 +51,8 @@ class ApplyingMigrationTests(unittest.TestCase):
         self.migrator.run_migrations()
 
         cqlexecutor.CQLExecutor.add_schema_migration.assert_has_calls([
-            mock.call(self.session, 1),
-            mock.call(self.session, 2)
+            mock.call(self.session, 1, False),
+            mock.call(self.session, 2, False)
         ])
 
     def test_it_should_only_run_migrations_that_have_not_been_applied(self):
@@ -61,7 +62,8 @@ class ApplyingMigrationTests(unittest.TestCase):
 
         cqlexecutor.CQLExecutor.execute.assert_called_once_with(
             self.session,
-            migration_2_content
+            migration_2_content,
+            False
         )
 
     def test_migration_version(self):
@@ -101,14 +103,15 @@ class UndoMigrationTests(unittest.TestCase):
         cqlexecutor.CQLExecutor.rollback_schema_migration = mock.Mock()
         self.migrator.undo()
         cqlexecutor.CQLExecutor.rollback_schema_migration. \
-            assert_called_once_with(self.session)
+            assert_called_once_with(self.session,False)
 
     def test_it_should_rollback_version_2(self):
         cqlexecutor.CQLExecutor.execute_undo = mock.Mock()
         self.migrator.undo()
         cqlexecutor.CQLExecutor.execute_undo.assert_called_once_with(
             self.session,
-            migration_2_content
+            migration_2_content,
+            False
         )
 
     def test_it_should_do_nothing_if_at_version_0(self):
@@ -207,14 +210,14 @@ class SessionTests(unittest.TestCase):
         mock_cluster.connect.return_value = mock_session
         self.mock_cluster.return_value = mock_cluster
 
-        session = migrator.configure_session(mock_session, self.config)
+        session = migrator.configure_session(mock_session, self.config, False)
 
         self.assertEqual(level, session.default_consistency_level)
 
     def test_consistency_level_ALL(self):
         self.config['consistency_level'] = 'ALL'
 
-        session = migrator.configure_session(self.session, self.config)
+        session = migrator.configure_session(self.session, self.config, False)
 
         self.assertEqual(
             cassandra.ConsistencyLevel.ALL,
@@ -224,7 +227,7 @@ class SessionTests(unittest.TestCase):
     def test_consistency_level_EACH_QUORUM(self):
         self.config['consistency_level'] = 'EACH_QUORUM'
 
-        session = migrator.configure_session(self.session, self.config)
+        session = migrator.configure_session(self.session, self.config, False)
 
         self.assertEqual(
             cassandra.ConsistencyLevel.EACH_QUORUM,
@@ -240,7 +243,7 @@ class SessionTests(unittest.TestCase):
             None
         ]
 
-        migrator.configure_session(self.session, self.config)
+        migrator.configure_session(self.session, self.config, False)
         ((args,), _) = self.session.set_keyspace.call_args
         self.assertEqual(self.config["keyspace"], args)
 
@@ -259,7 +262,7 @@ class SessionTests(unittest.TestCase):
         self.session.set_keyspace.side_effect = cassandra.InvalidRequest
 
         with self.assertRaises(cassandra.InvalidRequest):
-            migrator.configure_session(self.session, self.config)
+            migrator.configure_session(self.session, self.config, False)
 
         ((args,), _) = self.session.set_keyspace.call_args
         self.assertEqual(self.config["keyspace"], args)

@@ -13,13 +13,15 @@ from cdeploy import exceptions as exc
 
 
 class Migrator(object):
-    def __init__(self, migrations_path, session):
+    def __init__(self, migrations_path, session, dry_run=False):
         print('Reading migrations from {0}'.format(migrations_path))
         self.migrations_path = migrations_path
         self.session = session
+        self.dry_run = dry_run
 
     def run_migrations(self):
-        cqlexecutor.CQLExecutor.init_table(self.session)
+
+        cqlexecutor.CQLExecutor.init_table(self.session, self.dry_run)
 
         top_version = self.get_top_version()
 
@@ -71,14 +73,23 @@ class Migrator(object):
 
         cqlexecutor.CQLExecutor.execute_undo(
             self.session,
-            self.read_migration(top_migration)
+            self.read_migration(top_migration),
+            self.dry_run
         )
-        cqlexecutor.CQLExecutor.rollback_schema_migration(self.session)
+        cqlexecutor.CQLExecutor.rollback_schema_migration(self.session,self.dry_run)
         print('  -> Migration {0} undone ({1})\n'.format(top_version,
                                                          top_migration))
 
     def get_top_version(self):
-        result = cqlexecutor.CQLExecutor.get_top_version(self.session)
+        result = []
+        try:
+            result = cqlexecutor.CQLExecutor.get_top_version(self.session)
+        except cassandra.InvalidRequest:
+            if self.dry_run:
+                print("Create schema_migrations table")
+            else:
+                raise
+
         top_version = result[0].version if len(result) > 0 else 0
         print('Current version is {0}'.format(top_version))
         return top_version
@@ -99,8 +110,8 @@ class Migrator(object):
         migration_script = self.read_migration(file_name)
         version = self.migration_version(file_name)
 
-        cqlexecutor.CQLExecutor.execute(self.session, migration_script)
-        cqlexecutor.CQLExecutor.add_schema_migration(self.session, version)
+        cqlexecutor.CQLExecutor.execute(self.session, migration_script, self.dry_run)
+        cqlexecutor.CQLExecutor.add_schema_migration(self.session, version, self.dry_run)
         print('  -> Migration {0} applied ({1})\n'.format(version, file_name))
 
     def read_migration(self, file_name):
@@ -122,6 +133,12 @@ def main():
         undo = True
         sys.argv.remove('--undo')
 
+    dry_run = False
+    if '--dry-run' in sys.argv:
+        dry_run = True
+        sys.argv.remove('--dry-run')
+        print("Dry Run Only - showing proposed changes below")
+
     migrations_path = (
         DEFAULT_MIGRATIONS_PATH if len(sys.argv) == 1 else sys.argv[1]
     )
@@ -133,8 +150,8 @@ def main():
     config = load_config(migrations_path, os.getenv('ENV'))
     cluster = get_cluster(config)
     session = cluster.connect()
-    session = configure_session(session, config)
-    migrator = Migrator(migrations_path, session)
+    session = configure_session(session, config, dry_run)
+    migrator = Migrator(migrations_path, session, dry_run)
 
     if undo:
         migrator.undo()
@@ -170,7 +187,7 @@ def get_cluster(config):
     return cluster
 
 
-def configure_session(session, config):
+def configure_session(session, config, dry_run):
     # Set session options.  One dict mapping cdeploy option names to
     # corresponding cassandra session option names; another dict defining any
     # conversions that need to be done on the value in the config file. This
@@ -196,21 +213,23 @@ def configure_session(session, config):
     except cassandra.InvalidRequest:
         # Keyspace doesn't exist yet
         if 'create_keyspace' in config and config['create_keyspace']:
-            create_keyspace(config, session)
+            create_keyspace(config, session, dry_run)
         else:
             raise
 
     return session
 
 
-def create_keyspace(config, session):
-    session.execute(
-        "CREATE KEYSPACE {0} WITH REPLICATION = {1};".format(
-                config['keyspace'],
-                config['replication_strategy']
+def create_keyspace(config, session, dry_run):
+
+    print("Creating keyspace {0}".format(config['keyspace']))
+
+    if not dry_run:
+        session.execute("CREATE KEYSPACE {0} WITH REPLICATION = {1};".format(
+                    config['keyspace'],
+                    config['replication_strategy'])
         )
-    )
-    session.set_keyspace(config['keyspace'])
+        session.set_keyspace(config['keyspace'])
 
 
 def invalid_migrations_dir(migrations_path):
