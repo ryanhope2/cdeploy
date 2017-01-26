@@ -76,7 +76,10 @@ class Migrator(object):
             self.read_migration(top_migration),
             self.dry_run
         )
-        cqlexecutor.CQLExecutor.rollback_schema_migration(self.session,self.dry_run)
+        cqlexecutor.CQLExecutor.rollback_schema_migration(
+            self.session,
+            self.dry_run
+        )
         print('  -> Migration {0} undone ({1})\n'.format(top_version,
                                                          top_migration))
 
@@ -110,8 +113,16 @@ class Migrator(object):
         migration_script = self.read_migration(file_name)
         version = self.migration_version(file_name)
 
-        cqlexecutor.CQLExecutor.execute(self.session, migration_script, self.dry_run)
-        cqlexecutor.CQLExecutor.add_schema_migration(self.session, version, self.dry_run)
+        cqlexecutor.CQLExecutor.execute(
+            self.session,
+            migration_script,
+            self.dry_run
+        )
+        cqlexecutor.CQLExecutor.add_schema_migration(
+            self.session,
+            version,
+            self.dry_run
+        )
         print('  -> Migration {0} applied ({1})\n'.format(version, file_name))
 
     def read_migration(self, file_name):
