@@ -1,5 +1,9 @@
 Changelog
 =========
+1.8
+---
+- Adds optional port parameter for Cassandra connection
+
 1.7
 ---
 - Properly closes connection to cluster
